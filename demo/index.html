@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Web demo · Don&#x27;t Move</title>
+<meta name="description" content="Don't Move: hold your iPhone still. A precise steadiness game.">
+<style>
+:root { color-scheme: dark; --bg:#070b14; --surface:#0e1525; --text:#f2f5fa; --muted:rgba(255,255,255,.66);
+  --cyan:#38e4ff; --line:rgba(255,255,255,.12); }
+* { box-sizing: border-box; }
+body { margin:0; background: radial-gradient(circle at 50% 0, rgba(56,228,255,.10), transparent 420px), var(--bg);
+  color:var(--text); font: 17px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; }
+main { max-width: 720px; margin: 0 auto; padding: 32px 20px 64px; }
+nav { display:flex; flex-wrap:wrap; gap: 6px 18px; margin-bottom: 32px; font-weight:600; font-size:15px; }
+nav a.brand { letter-spacing:.18em; color:var(--text); margin-right:auto; }
+a { color: var(--cyan); text-decoration: none; } a:hover { text-decoration: underline; }
+h1 { font-size: 34px; letter-spacing: .06em; line-height:1.2; margin: 0 0 8px; }
+h2 { font-size: 20px; margin: 32px 0 6px; }
+p, li { color: var(--muted); } strong { color: var(--text); }
+ul { padding-left: 22px; }
+.lead { font-size: 20px; color: var(--text); }
+.card { background: var(--surface); border:1px solid var(--line); border-radius: 18px; padding: 18px 20px; margin: 18px 0; }
+.reticle { width: 96px; height: 96px; margin: 8px 0 20px; }
+footer { margin-top: 48px; padding-top: 16px; border-top:1px solid var(--line); font-size: 14px; color: var(--muted); }
+</style>
+<style>
+.demo { text-align: center; }
+.demo h1 { margin-bottom: 4px; }
+.badge { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .14em; color: var(--cyan);
+  border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; margin-bottom: 12px; }
+.stage { position: relative; width: 220px; height: 220px; margin: 20px auto 8px; }
+.stage svg { width: 100%; height: 100%; }
+.dot { position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
+  background: var(--cyan); box-shadow: 0 0 18px rgba(56,228,255,.7); transition: transform 60ms linear; }
+.readout { font: 700 56px/1.1 ui-monospace, "SF Mono", Menlo, monospace; color: var(--text); margin: 6px 0 0; font-variant-numeric: tabular-nums; }
+.readout small { font-size: 22px; color: var(--muted); }
+.status { min-height: 52px; margin: 8px 0 16px; color: var(--text); font-weight: 600; }
+.bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin: 0 auto 20px; max-width: 320px; }
+.bar span { display: block; height: 100%; width: 0; background: var(--cyan); }
+button.go { appearance: none; border: 0; border-radius: 999px; background: var(--cyan); color: var(--bg);
+  font: 700 18px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; letter-spacing: .08em;
+  padding: 18px 40px; min-width: 200px; cursor: pointer; }
+button.go:disabled { opacity: .4; cursor: default; }
+.demo .card { text-align: left; }
+@media (prefers-reduced-motion: reduce) { .dot { transition: none; } }
+</style></head>
+<body><main>
+<nav><a class="brand" href="../">DON'T MOVE</a><a href="../methodology/">How it works</a><a href="../support/">Support</a><a href="../press/">Press</a><a href="../privacy/">Privacy</a><a href="../terms/">Terms</a></nav>
+<div class="demo">
+<span class="badge">WEB DEMO</span>
+<h1>Try it in your browser</h1>
+<p class="lead">Hold your iPhone still for five seconds.</p>
+
+<div class="stage" aria-hidden="true">
+<svg viewBox="0 0 100 100"><g fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1">
+<circle cx="50" cy="50" r="46"/><circle cx="50" cy="50" r="30"/><circle cx="50" cy="50" r="12"/>
+<path d="M50 2v18M50 80v18M2 50h18M80 50h18"/></g></svg>
+<div class="dot" id="dot"></div>
+</div>
+
+<p class="readout" id="readout" aria-live="off">–.––<small>°</small></p>
+<p class="status" id="status" role="status" aria-live="polite">Hold the phone in front of you, then tap Start.</p>
+<div class="bar" aria-hidden="true"><span id="bar"></span></div>
+<button class="go" id="go" type="button">START</button>
+</div>
+
+<div class="card">
+<p><strong>This is a web demo, not the app.</strong> The number is a rough approximation in degrees. Browsers report motion less precisely and less often than the app can read it, and this page uses a simple three-second countdown instead of the app's automatic start, so it is not comparable with an in-app Drift Score. Lower is better.</p>
+<p>Nothing is stored or sent anywhere: the page runs entirely on your phone, with no analytics. Don't Move is a game, not a medical or scientific measurement.</p>
+<p><a href="../methodology/">How the real Drift Score works</a> · <a href="../">Back to Don't Move</a></p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var COUNTDOWN_MS = 3000, CALIBRATION_MS = 450, MEASURE_MS = 5000, TIMEOUT_MS = 1500, CUTOFF_HZ = 14;
+  var RAD = Math.PI / 180;
+  var go = document.getElementById("go"), statusEl = document.getElementById("status"),
+      readout = document.getElementById("readout"), bar = document.getElementById("bar"), dot = document.getElementById("dot");
+
+  var state = "idle", startedAt = 0, lastEventAt = 0, calibration = [], reference = null, refTilt = null,
+      filtered = null, lastSampleAt = 0, deviations = [], ticker = 0, watchdog = 0, listening = false;
+
+  function setStatus(text) { if (statusEl.textContent !== text) statusEl.textContent = text; }
+  function show(value) { readout.innerHTML = (value == null ? "–.––" : value.toFixed(2)) + "<small>°</small>"; }
+
+  // W3C DeviceOrientation: intrinsic Z-X'-Y'' rotation (alpha, beta, gamma) to a unit quaternion.
+  function quaternion(alpha, beta, gamma) {
+    var x = (beta || 0) * RAD / 2, y = (gamma || 0) * RAD / 2, z = (alpha || 0) * RAD / 2;
+    var cX = Math.cos(x), cY = Math.cos(y), cZ = Math.cos(z), sX = Math.sin(x), sY = Math.sin(y), sZ = Math.sin(z);
+    return [cX * cY * cZ - sX * sY * sZ, sX * cY * cZ - cX * sY * sZ, cX * sY * cZ + sX * cY * sZ, cX * cY * sZ + sX * sY * cZ];
+  }
+  function dot4(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]; }
+  // q and -q are the same rotation: flip into one hemisphere before averaging.
+  function average(list) {
+    var sum = [0, 0, 0, 0], first = list[0];
+    list.forEach(function (s) { var sign = dot4(s.q, first.q) < 0 ? -1 : 1; for (var i = 0; i < 4; i++) sum[i] += sign * s.q[i]; });
+    var n = Math.sqrt(dot4(sum, sum));
+    return n > 0 ? sum.map(function (v) { return v / n; }) : null;
+  }
+  function angleDegrees(a, b) { return 2 * Math.acos(Math.min(1, Math.abs(dot4(a, b)))) / RAD; }
+  function percentile(values, p) {
+    var s = values.slice().sort(function (a, b) { return a - b; });
+    var rank = p * (s.length - 1), lo = Math.floor(rank), hi = Math.ceil(rank);
+    return s[lo] + (s[hi] - s[lo]) * (rank - lo);
+  }
+
+  function onOrientation(e) {
+    if (e.beta == null || e.gamma == null) return;
+    var now = performance.now();
+    lastEventAt = now;
+    var sample = { t: now, q: quaternion(e.alpha, e.beta, e.gamma), beta: e.beta, gamma: e.gamma };
+    if (state === "countdown") {
+      calibration.push(sample);
+      while (calibration.length && calibration[0].t < now - CALIBRATION_MS) calibration.shift();
+    } else if (state === "measuring") {
+      var raw = angleDegrees(reference, sample.q);
+      if (filtered == null) { filtered = raw; }
+      else {
+        var dt = Math.max(0, (now - lastSampleAt) / 1000), rc = 1 / (2 * Math.PI * CUTOFF_HZ);
+        filtered += (dt / (rc + dt)) * (raw - filtered);
+      }
+      lastSampleAt = now;
+      deviations.push(filtered);
+      var dx = Math.max(-90, Math.min(90, (sample.gamma - refTilt.gamma) * 30));
+      var dy = Math.max(-90, Math.min(90, (sample.beta - refTilt.beta) * 30));
+      dot.style.transform = "translate(" + dx.toFixed(1) + "px," + dy.toFixed(1) + "px)";
+    }
+  }
+
+  function listen() {
+    if (listening) return;
+    window.addEventListener("deviceorientation", onOrientation);
+    listening = true;
+  }
+
+  function askPermission() {
+    // iOS 13+: must be called directly from the tap. Motion and orientation share one permission in Safari.
+    var DME = window.DeviceMotionEvent, DOE = window.DeviceOrientationEvent;
+    var motion = DME && typeof DME.requestPermission === "function" ? DME.requestPermission() : Promise.resolve("granted");
+    return motion.then(function (result) {
+      if (result !== "granted") return result;
+      if (DOE && typeof DOE.requestPermission === "function") {
+        return DOE.requestPermission().catch(function () { return "granted"; });
+      }
+      return result;
+    });
+  }
+
+  function fail(text) {
+    state = "idle";
+    clearInterval(ticker); clearInterval(watchdog);
+    bar.style.width = "0";
+    dot.style.transform = "";
+    show(null);
+    setStatus(text);
+    go.disabled = false; go.textContent = "TRY AGAIN";
+  }
+
+  function finish() {
+    state = "idle";
+    clearInterval(ticker); clearInterval(watchdog);
+    bar.style.width = "100%";
+    if (deviations.length < 20) { fail("Too few motion readings arrived. Try again in Safari on an iPhone."); return; }
+    var score = percentile(deviations, 0.95);
+    show(score);
+    setStatus("Web drift ≈ " + score.toFixed(2) + "° (lower is better). Rough web approximation only.");
+    go.disabled = false; go.textContent = "TRY AGAIN";
+  }
+
+  function tick() {
+    var now = performance.now(), elapsed = now - startedAt;
+    if (state === "countdown") {
+      var left = Math.ceil((COUNTDOWN_MS - elapsed) / 1000);
+      setStatus(left > 0 ? "Hold still… " + left : "Hold still…");
+      bar.style.width = "0";
+      if (elapsed >= COUNTDOWN_MS) {
+        if (!calibration.length) { fail("No motion data. Open this page in Safari on an iPhone and allow Motion & Orientation Access."); return; }
+        reference = average(calibration);
+        refTilt = {
+          beta: calibration.reduce(function (s, c) { return s + c.beta; }, 0) / calibration.length,
+          gamma: calibration.reduce(function (s, c) { return s + c.gamma; }, 0) / calibration.length
+        };
+        calibration = []; deviations = []; filtered = null;
+        state = "measuring"; startedAt = now;
+        setStatus("Measuring. Don't move.");
+      }
+    } else if (state === "measuring") {
+      bar.style.width = Math.min(100, elapsed / MEASURE_MS * 100) + "%";
+      if (deviations.length) show(deviations[deviations.length - 1]);
+      if (elapsed >= MEASURE_MS) finish();
+    }
+  }
+
+  function start() {
+    go.disabled = true;
+    setStatus("Asking for motion access…");
+    askPermission().then(function (result) {
+      if (result !== "granted") {
+        fail("Motion access was not allowed. You may need to close Safari fully, reopen this page and tap Allow.");
+        return;
+      }
+      listen();
+      calibration = []; deviations = []; filtered = null; reference = null;
+      dot.style.transform = "";
+      show(null);
+      state = "countdown"; startedAt = performance.now(); lastEventAt = startedAt;
+      clearInterval(watchdog);
+      watchdog = setInterval(function () {
+        if ((state === "countdown" || state === "measuring") && performance.now() - lastEventAt > TIMEOUT_MS) {
+          fail("No motion data arrived. This demo needs Safari on an iPhone with Motion & Orientation Access allowed.");
+        }
+      }, 250);
+      clearInterval(ticker);
+      ticker = setInterval(tick, 40);
+    }).catch(function () {
+      fail("This browser did not allow motion access. Try Safari on an iPhone.");
+    });
+  }
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && state !== "idle") fail("You left the page, so the round was cancelled.");
+  });
+  go.addEventListener("click", start);
+  if (!("DeviceOrientationEvent" in window)) setStatus("This browser has no motion sensors. Open this page on an iPhone.");
+})();
+</script>
+<footer>© Stølen Development AS · org. no. 937 561 008 · Vikagata 17, 6010 Ålesund, Norway · <a href="mailto:main@stolendevelopment.no">main@stolendevelopment.no</a></footer>
+</main></body></html>

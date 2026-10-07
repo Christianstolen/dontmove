@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How it works · Don&#x27;t Move</title>
+<meta name="description" content="Don't Move: hold your iPhone still. A precise steadiness game.">
+<style>
+:root { color-scheme: dark; --bg:#070b14; --surface:#0e1525; --text:#f2f5fa; --muted:rgba(255,255,255,.66);
+  --cyan:#38e4ff; --line:rgba(255,255,255,.12); }
+* { box-sizing: border-box; }
+body { margin:0; background: radial-gradient(circle at 50% 0, rgba(56,228,255,.10), transparent 420px), var(--bg);
+  color:var(--text); font: 17px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; }
+main { max-width: 720px; margin: 0 auto; padding: 32px 20px 64px; }
+nav { display:flex; flex-wrap:wrap; gap: 6px 18px; margin-bottom: 32px; font-weight:600; font-size:15px; }
+nav a.brand { letter-spacing:.18em; color:var(--text); margin-right:auto; }
+a { color: var(--cyan); text-decoration: none; } a:hover { text-decoration: underline; }
+h1 { font-size: 34px; letter-spacing: .06em; line-height:1.2; margin: 0 0 8px; }
+h2 { font-size: 20px; margin: 32px 0 6px; }
+p, li { color: var(--muted); } strong { color: var(--text); }
+ul { padding-left: 22px; }
+.lead { font-size: 20px; color: var(--text); }
+.card { background: var(--surface); border:1px solid var(--line); border-radius: 18px; padding: 18px 20px; margin: 18px 0; }
+.reticle { width: 96px; height: 96px; margin: 8px 0 20px; }
+footer { margin-top: 48px; padding-top: 16px; border-top:1px solid var(--line); font-size: 14px; color: var(--muted); }
+</style></head>
+<body><main>
+<nav><a class="brand" href="../">DON'T MOVE</a><a href="../methodology/">How it works</a><a href="../support/">Support</a><a href="../press/">Press</a><a href="../privacy/">Privacy</a><a href="../terms/">Terms</a></nav>
+<h1>How it works</h1>
+<p>How Don't Move turns "hold it still" into one number, in plain language.</p>
+<p><strong>Don't Move is a game. Drift Score is not a medical or scientific measurement</strong>, and it should not be used to judge anyone's health.</p>
+<h2>The short version</h2>
+<p>Your iPhone knows which way it is facing. Don't Move remembers that direction at the start of the round, then measures how far the phone turns away from it while you hold it. Your <strong>Drift Score</strong> is how far it drifted, in degrees. <strong>Lower is better.</strong></p>
+<h2>1. Locking the start</h2>
+<p>You never have to tap at the moment you need to be still. Hold the phone the way you want to hold it: once it has settled, the round locks your starting position by itself and counts down from 3.</p>
+<p>The start orientation is captured during the last moments of that countdown, roughly the final 0.45 seconds. The app averages the phone's orientation over that short window instead of taking a single reading, so one twitch at the wrong moment does not set a crooked reference.</p>
+<h2>2. Measuring the drift</h2>
+<p>During the round, the iPhone's motion sensors report the phone's orientation (its attitude) many times a second. The app stores each orientation as a quaternion, a way of describing a rotation that has no weak spots when the phone points straight up or turns past a full circle, which angles such as pitch, roll and yaw can have.</p>
+<p>For every reading, the app works out the single angle between the start orientation and the current one. That angle is the drift at that moment, in degrees. It does not matter which way the phone moved: tilting, turning and twisting all count the same.</p>
+<h2>3. A light filter</h2>
+<p>Each drift reading passes through a light low-pass filter with a 14 Hz cutoff. It smooths out sensor noise that no hand could produce, but it is deliberately light, so the small natural shake of a real hand still counts.</p>
+<h2>4. Why the 95th percentile</h2>
+<p>When the round ends, the app sorts all the filtered drift readings and takes the 95th percentile: the value that 95 % of the round stayed under. That number is your Drift Score.</p>
+<ul><li>It is fairer than the single worst moment, so one spike cannot ruin a round.</li><li>It is stricter than the average, so a round that was calm most of the time but wobbled for a second still shows it.</li></ul>
+<p>The app shows the score with three decimals so small improvements are visible.</p>
+<h2>5. Grades</h2>
+<p>UNREAL, LASER, ROCK SOLID, STEADY, DECENT, SHAKY and CHAOS are fixed bands of Drift Score, from best to worst. They are game labels set by design. They are <strong>not</strong> comparisons with other people, and the app makes no "top X %" claims.</p>
+<h2>6. Different iPhones, different scores</h2>
+<p>Different iPhone models have different motion sensors, so the same hand can score differently on two phones. Compare your scores on the same iPhone. A Pass &amp; Play party on one phone is fair in that sense: everyone plays on the same sensors.</p>
+<h2>7. What can cancel a round</h2>
+<p>A round is cancelled and nothing is saved if you leave the app, if the phone falls, or if the motion sensors stop sending data. A falling phone is recognised as a drop, not as a bad score.</p>
+<h2>8. The measurement stays on your iPhone</h2>
+<p>All of this happens on the phone, in real time. Raw sensor readings are not stored or sent anywhere. See the <a href="../privacy/">Privacy Policy</a>.</p>
+<h2>Try a rough version</h2>
+<p>The <a href="../demo/">web demo</a> runs a simplified five-second version in Safari on iPhone. Browsers report motion less precisely than the app can read it, so the web number is only an approximation and is not comparable with an in-app Drift Score.</p>
+<footer>© Stølen Development AS · org. no. 937 561 008 · Vikagata 17, 6010 Ålesund, Norway · <a href="mailto:main@stolendevelopment.no">main@stolendevelopment.no</a></footer>
+</main></body></html>
